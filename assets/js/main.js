@@ -1,47 +1,106 @@
-const pokemonList = document.getElementById('pokemonList')
-const loadMoreButton = document.getElementById('loadMoreButton')
+// Suponha que você tenha uma lista de Pokémon chamada "pokemonList" e uma variável "selectedPokemon" com os detalhes do Pokémon selecionado
 
-const maxRecords = 151
-const limit = 10
+const pokemonList = document.getElementById('pokemonList');
+const pokemonImage = document.getElementById('pokemonImage');
+const pokemonInfo = document.getElementById('pokemonInfo');
+const pokemonDetails = document.getElementById('pokemonDetails');
+const loadMoreButton = document.getElementById('loadMoreButton');
+
 let offset = 0;
+const limit = 10;
+const maxRecords = 151;
 
-function convertPokemonToLi(pokemon) {
-    return `
-        <li class="pokemon ${pokemon.type}">
-            <span class="number">#${pokemon.number}</span>
-            <span class="name">${pokemon.name}</span>
+// Função para preencher a lista de Pokémon
+function populatePokemonList(pokemons) {
+    const listItems = pokemons.map((pokemon) => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `#${pokemon.number} - ${pokemon.name}`;
+        listItem.classList.add('pokemon');
+        listItem.classList.add(pokemon.type);
 
-            <div class="detail">
-                <ol class="types">
-                    ${pokemon.types.map((type) => `<li class="type ${type}">${type}</li>`).join('')}
-                </ol>
+        listItem.addEventListener('click', () => {
+            selectPokemon(pokemon);
+        });
 
-                <img src="${pokemon.photo}"
-                     alt="${pokemon.name}">
-            </div>
-        </li>
-    `
+        return listItem;
+    });
+
+    listItems.forEach((listItem) => {
+        pokemonList.appendChild(listItem);
+    });
 }
 
-function loadPokemonItens(offset, limit) {
-    pokeApi.getPokemons(offset, limit).then((pokemons = []) => {
-        const newHtml = pokemons.map(convertPokemonToLi).join('')
-        pokemonList.innerHTML += newHtml
-    })
+// Função para selecionar um Pokémon
+function selectPokemon(pokemon) {
+    selectedPokemon = pokemon;
+    updatePokemonDetails();
 }
 
-loadPokemonItens(offset, limit)
+// Função para atualizar a visualização de detalhes do Pokémon
+function updatePokemonDetails() {
+    if (selectedPokemon) {
+        pokemonImage.src = selectedPokemon.photo;
+        pokemonImage.style.transform = 'scale(1.5)';
+        pokemonDetails.style.display = 'block';
 
-loadMoreButton.addEventListener('click', () => {
-    offset += limit
-    const qtdRecordsWithNexPage = offset + limit
+        pokemonInfo.innerHTML = `
+            <h2>${selectedPokemon.name}</h2>
+            <p>Number: #${selectedPokemon.number}</p>
+            <p>Type: ${selectedPokemon.type}</p>
+            <!-- Outros detalhes do Pokémon aqui -->
+        `;
+    }
+}
+
+// Função para carregar mais Pokémon
+function loadMorePokemons() {
+    offset += limit;
+    const qtdRecordsWithNexPage = offset + limit;
 
     if (qtdRecordsWithNexPage >= maxRecords) {
-        const newLimit = maxRecords - offset
-        loadPokemonItens(offset, newLimit)
-
-        loadMoreButton.parentElement.removeChild(loadMoreButton)
+        const newLimit = maxRecords - offset;
+        pokeApi.getPokemons(offset, newLimit).then((pokemons) => {
+            populatePokemonList(pokemons);
+            loadMoreButton.parentElement.removeChild(loadMoreButton);
+        });
     } else {
-        loadPokemonItens(offset, limit)
+        pokeApi.getPokemons(offset, limit).then((pokemons) => {
+            populatePokemonList(pokemons);
+        });
     }
-})
+}
+
+// Carrega os primeiros Pokémon
+pokeApi.getPokemons(offset, limit).then((pokemons) => {
+    populatePokemonList(pokemons).join('');
+});
+
+// Adiciona um ouvinte de evento ao botão "Load More"
+loadMoreButton.addEventListener('click', loadMorePokemons);
+
+let selectedPokemon = null; // Variável para armazenar o Pokémon selecionado
+
+// Função para criar uma cópia da imagem e mostrar os detalhes do Pokémon
+function showPokemonDetails() {
+    if (selectedPokemon) {
+        // Crie uma cópia da imagem original
+        const enlargedImage = pokemonImage.cloneNode(true);
+        enlargedImage.style.transform = 'scale(1.5)'; // Aumenta o tamanho da cópia
+
+        // Limpe a área de detalhes e insira a cópia da imagem
+        pokemonInfo.innerHTML = '';
+        pokemonInfo.appendChild(enlargedImage);
+
+        pokemonDetails.style.display = 'block'; // Exibe os detalhes do Pokémon
+        // Preencha o elemento "pokemonInfo" com os detalhes do Pokémon
+        pokemonInfo.innerHTML += `
+            <h2>${selectedPokemon.name}</h2>
+            <p>Number: #${selectedPokemon.number}</p>
+            <p>Type: ${selectedPokemon.type}</p>
+            <!-- Outros detalhes do Pokémon aqui -->
+        `;
+    }
+}
+
+// Adicione um ouvinte de evento de clique à imagem do Pokémon
+pokemonImage.addEventListener('click', showPokemonDetails);
